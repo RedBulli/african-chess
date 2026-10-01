@@ -36,6 +36,20 @@ async function drag(from, to) {
   await startDrag(from, to);
   await page.mouse.up();
 }
+async function quickDrag(from, to) {
+  const source = await square(from).boundingBox();
+  const target = typeof to === 'string' ? await square(to).boundingBox() : to;
+  const input = await context.newCDPSession(page);
+  try {
+    // A fast gesture may reach pointerup before any pointermove is delivered.
+    await input.send('Input.dispatchMouseEvent', { type: 'mousePressed',
+      x: source.x + source.width / 2, y: source.y + source.height / 2,
+      button: 'left', buttons: 1, clickCount: 1 });
+    await input.send('Input.dispatchMouseEvent', { type: 'mouseReleased',
+      x: target.x + target.width / 2, y: target.y + target.height / 2,
+      button: 'left', buttons: 0, clickCount: 1 });
+  } finally { await input.detach(); }
+}
 async function fixture(fen, human = 'white') {
   await page.evaluate(({ fen, human }) => localStorage.setItem('african-chess:play:v1', JSON.stringify({ version: 1, fen, human, level: 'relaxed', moves: [], flipped: false })), { fen, human });
   await page.reload(); await ready();
@@ -44,6 +58,14 @@ try {
   await page.goto(origin); await ready();
   assert.equal(await page.locator('.board .piece').count(), 32);
   assert.equal(await page.locator('.square').first().getAttribute('data-square'), 'h1');
+  await quickDrag('e7', 'e5');
+  await count(2);
+  await page.locator('#undo').click(); await count(0);
+  await quickDrag('e7', 'e4');
+  assert.equal(await page.locator('#move-count').textContent(), '0');
+  assert.equal(await square('e7').getAttribute('data-piece'), 'pawn');
+  await quickDrag('e7', { x: 0, y: 0, width: 1, height: 1 });
+  assert.equal(await page.locator('#move-count').textContent(), '0');
   await drag('e7', 'e5'); await count(2);
   await page.locator('#undo').click(); await count(0);
   await drag('e7', 'e4');
@@ -53,6 +75,22 @@ try {
   assert.equal(await page.locator('#move-count').textContent(), '0');
   await drag('e2', 'e4');
   assert.equal(await page.locator('#move-count').textContent(), '0');
+  await page.evaluate(() => {
+    window.dragCaptureId = null;
+    document.querySelector('#board').addEventListener('gotpointercapture', event => {
+      window.dragCaptureId = event.pointerId;
+    }, { once: true });
+  });
+  await startDrag('e7', 'e5');
+  assert.ok((await square('e5').getAttribute('class')).includes('drop-target'));
+  assert.equal(await page.evaluate(() => {
+    const board = document.querySelector('#board');
+    if (!board.hasPointerCapture(window.dragCaptureId)) return false;
+    board.releasePointerCapture(window.dragCaptureId);
+    return true;
+  }), true, 'the highlighted drag had capture before losing it');
+  await page.mouse.up(); await count(2);
+  await page.locator('#undo').click(); await count(0);
   await startDrag('e7', 'e5');
   assert.ok((await square('e5').getAttribute('class')).includes('drop-target'));
   assert.equal(await page.locator('.drag-preview').count(), 1);

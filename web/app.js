@@ -167,7 +167,8 @@ window.addEventListener('pointerup', event => {
   if (!drag || event.pointerId !== drag.pointerId) return;
   const target = dragTarget(event.clientX, event.clientY)?.dataset.square;
   const current = finishDrag();
-  if (!current.active) return;
+  // Fast gestures can reach pointerup without an intervening pointermove.
+  if (!current.active && Math.hypot(event.clientX - current.x, event.clientY - current.y) < 6) return;
   event.preventDefault();
   // Browsers can emit a click after pointerup, even after an invalid drop.
   suppressDragClick = true;
@@ -179,11 +180,11 @@ window.addEventListener('pointerup', event => {
 $('#board').addEventListener('click', event => {
   if (suppressDragClick) { event.preventDefault(); event.stopImmediatePropagation(); }
 }, true);
-for (const type of ['pointercancel', 'lostpointercapture']) {
-  $('#board').addEventListener(type, event => {
-    if (drag?.pointerId === event.pointerId) cancelDrag();
-  });
-}
+// Losing capture can precede pointerup; the window listeners still track the
+// gesture. Only an explicit pointer cancellation should discard the drop.
+window.addEventListener('pointercancel', event => {
+  if (drag?.pointerId === event.pointerId) cancelDrag();
+});
 window.addEventListener('blur', cancelDrag);
 window.addEventListener('keydown', event => {
   if (event.key === 'Escape' && drag) { event.preventDefault(); cancelDrag(); }
