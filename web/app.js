@@ -19,6 +19,7 @@ try {
 } catch { /* A fresh game remains available when storage is disabled or invalid. */ }
 let state = null, selected = null, busy = false, epoch = 0, controller = null, aiTimer = null;
 let error = '', historyLength = -1, canSave = true;
+let drag = null, suppressDragClick = false;
 
 // Original SVG silhouettes; colors are set by CSS for a consistent set.
 const drawings = {
@@ -110,6 +111,83 @@ function selectSquare(square) {
   selected = piece?.color === model.human && selected !== square ? square : null;
   render();
 }
+function finishDrag() {
+  const current = drag;
+  drag = null;
+  current?.preview?.remove();
+  $('#board').querySelector('.drag-source')?.classList.remove('drag-source');
+  $('#board').querySelector('.drop-target')?.classList.remove('drop-target');
+  if (current && $('#board').hasPointerCapture(current.pointerId)) $('#board').releasePointerCapture(current.pointerId);
+  return current;
+}
+function cancelDrag() {
+  if (finishDrag()?.active) { selected = null; render(); }
+}
+function dragTarget(x, y) {
+  const target = document.elementFromPoint(x, y)?.closest('.square');
+  return target && $('#board').contains(target) ? target : null;
+}
+$('#board').addEventListener('pointerdown', event => {
+  if (!event.isPrimary || event.button !== 0 || drag || busy || !state
+      || state.outcome !== 'ongoing' || state.turn !== model.human || $('#promotion').open) return;
+  const square = event.target.closest('.square');
+  const piece = state.pieces.find(p => p.square === square?.dataset.square);
+  if (!piece || piece.color !== model.human || piece.frozen
+      || !state.legal_moves.some(m => m.from === piece.square)) return;
+  drag = { pointerId: event.pointerId, from: piece.square, piece,
+    x: event.clientX, y: event.clientY, active: false };
+});
+window.addEventListener('pointermove', event => {
+  if (!drag || event.pointerId !== drag.pointerId) return;
+  if (!drag.active) {
+    if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 6) return;
+    $('#board').setPointerCapture(event.pointerId);
+    selected = drag.from;
+    // Keep capture on the board while replacing its square buttons.
+    renderBoard(); renderStatus();
+    drag.active = true;
+    const source = $('#board').querySelector(`[data-square="${drag.from}"]`);
+    source.classList.add('drag-source');
+    drag.preview = document.createElement('div');
+    drag.preview.className = 'drag-preview';
+    drag.preview.setAttribute('aria-hidden', 'true');
+    drag.preview.style.width = `${source.getBoundingClientRect().width}px`;
+    drag.preview.style.height = `${source.getBoundingClientRect().height}px`;
+    drag.preview.innerHTML = pieceSVG(drag.piece.kind, drag.piece.color);
+    document.body.append(drag.preview);
+  }
+  event.preventDefault();
+  drag.preview.style.left = `${event.clientX}px`;
+  drag.preview.style.top = `${event.clientY}px`;
+  $('#board').querySelector('.drop-target')?.classList.remove('drop-target');
+  const target = dragTarget(event.clientX, event.clientY);
+  if (target?.classList.contains('legal')) target.classList.add('drop-target');
+});
+window.addEventListener('pointerup', event => {
+  if (!drag || event.pointerId !== drag.pointerId) return;
+  const target = dragTarget(event.clientX, event.clientY)?.dataset.square;
+  const current = finishDrag();
+  if (!current.active) return;
+  event.preventDefault();
+  // Browsers can emit a click after pointerup, even after an invalid drop.
+  suppressDragClick = true;
+  setTimeout(() => { suppressDragClick = false; }, 0);
+  selected = current.from;
+  if (state.legal_moves.some(m => m.from === current.from && m.to === target)) selectSquare(target);
+  else { selected = null; render(); }
+});
+$('#board').addEventListener('click', event => {
+  if (suppressDragClick) { event.preventDefault(); event.stopImmediatePropagation(); }
+}, true);
+for (const type of ['pointercancel', 'lostpointercapture']) {
+  $('#board').addEventListener(type, event => {
+    if (drag?.pointerId === event.pointerId) cancelDrag();
+  });
+}
+window.addEventListener('blur', cancelDrag);
+window.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && drag) { event.preventDefault(); cancelDrag(); }
+});
 function showPromotion(moves) {
   const generation = epoch;
   const options = $('#promotion-options'); options.replaceChildren();
@@ -194,7 +272,7 @@ function renderStatus() {
       heading = 'Opponent’s turn.'; detail = 'Use “Try again” if the opponent was interrupted.';
     } else {
       heading = state.in_check ? 'You’re in check.' : 'Your move.';
-      detail = state.in_check ? 'Protect your king: move, block, capture, or freeze the attacker.' : 'Select a piece to see its legal moves.';
+      detail = state.in_check ? 'Protect your king: move, block, capture, or freeze the attacker.' : 'Select or drag a piece to see its legal moves.';
       const piece = state.pieces.find(p => p.square === selected);
       if (piece?.frozen) detail = `Your ${piece.kind} is frozen. Capture the adjacent enemy bishop to release it.`;
       else if (piece) {
@@ -238,6 +316,7 @@ function renderHistory() {
   historyLength = history.length;
 }
 function render() {
+  if (finishDrag()?.active) selected = null;
   document.body.dataset.busy = String(busy); document.body.dataset.turn = state?.turn || '';
   $('#error').hidden = !error; $('#error-message').textContent = error;
   document.querySelectorAll('[data-side]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.side === model.human)));

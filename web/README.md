@@ -4,6 +4,11 @@ Rules, legal moves, and the learned opponent run as Rust WebAssembly in a module
 Web Worker. The site consists entirely of static files and makes no game API
 requests. Saved games are stored locally in the browser.
 
+Move by selecting a piece and its destination, or drag a piece with a mouse or
+touch to a highlighted square. Dropping outside a legal target cancels the drag;
+Escape also cancels. Promotions still open the piece chooser, and dragging a
+giraffe onto a stationary capture target leaves the giraffe on its original square.
+
 ## Build and serve
 
 Build prerequisites: the pinned Rust toolchain, Python 3.10+, and wasm-pack.
@@ -94,7 +99,8 @@ installation. `GAME_URL` overrides the default http://127.0.0.1:8787; include a
 trailing slash when serving under a subdirectory. For example, serve `dist/`
 and set `GAME_URL=http://127.0.0.1:8787/web/` to exercise prefixed hosting.
 
-The browser tests cover actual human/AI moves, save/restore, both sides, undo,
+The browser tests cover mouse/touch dragging and cancellation, invalid drops,
+flipped-board dragging, actual human/AI moves, save/restore, both sides, undo,
 board flipping, terminating active AI on reset and undo, giraffe pins and
 stationary captures, freeze/thaw, promotion, checkmate, failed-WASM retry,
 offline play after loading, zero API requests, and mobile layout. Screenshots go
