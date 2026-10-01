@@ -1,0 +1,7 @@
+# The web server inside the image. Plain HTTP on port 80: TLS and the public
+# name belong to whatever proxy sits in front of the container.
+:80 {
+	root * /srv
+	encode zstd gzip
+	file_server
+}

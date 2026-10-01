@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#28463d">
+  <title>African Chess · Play</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+  <script src="./app.js" type="module"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="African Chess home"><img src="./icon.svg" width="32" height="32" alt=""><span>African chess<span class="brand-dot">.</span></span></a>
+    <div class="topbar-right"><span class="local-label"><i></i> LOCAL PLAY</span><a href="#field-guide" id="rules-link">The rules <span aria-hidden="true">↗</span></a></div>
+  </header>
+  <main>
+    <section class="intro"><div><p class="eyebrow">A NEW WAY TO PLAY</p><h1>A familiar board.<br class="mobile-only"> A different game.</h1><p class="intro-copy">Bishops freeze. Giraffes reach. Elephants leap.</p></div><span class="edition">01 / PRACTICE TABLE</span></section>
+    <div id="error" class="error-bar" role="alert" hidden><span id="error-message"></span><button id="retry">Try again</button></div>
+    <div class="game-layout">
+      <section class="board-column" aria-label="Game board">
+        <div class="player-bar" id="top-player"><div class="avatar" aria-hidden="true"></div><div class="player-copy"><strong></strong><span></span></div><span class="turn-tag"></span></div>
+        <div class="board-frame"><div id="board" class="board" role="group" aria-label="African Chess board"></div></div>
+        <div class="player-bar bottom-player" id="bottom-player"><div class="avatar" aria-hidden="true"></div><div class="player-copy"><strong></strong><span></span></div><span class="turn-tag"></span></div>
+        <div class="board-caption"><span><i class="legend-dot"></i> Legal move</span><span><i class="legend-capture"></i> Capture</span><span><i class="legend-frozen">❄</i> Frozen</span><span class="board-note">Black makes the first move</span></div>
+        <details class="field-guide" id="field-guide"><summary><span class="book-icon" aria-hidden="true">◇</span> Meet the unexpected pieces <span class="expand-icon" aria-hidden="true">+</span></summary><div class="guide-pieces">
+          <div><span class="guide-piece" data-piece="bishop"></span><h3>The bishop</h3><p>Moves diagonally. Freezes adjacent enemies, even while frozen itself. Remove the bishop to release its hold.</p></div>
+          <div><span class="guide-piece" data-piece="giraffe"></span><h3>The giraffe</h3><p>Moves like a knight. Can also capture the first enemy straight ahead without moving. Pieces block its reach.</p></div>
+          <div><span class="guide-piece" data-piece="elephant"></span><h3>The elephant</h3><p>Jumps to any square up to two squares away in either direction. It can step over other pieces.</p></div>
+        </div><p class="ordinary-rules">Pawns, queens and kings follow their usual rules, except there is no en passant. Check and checkmate apply. Frozen pieces cannot move or give check. Repetition and fifty-move draws are claimed automatically.</p></details>
+      </section>
+      <aside class="sidebar">
+        <section class="game-card">
+          <div class="card-eyebrow"><span>YOUR GAME</span><span id="status-dot" class="status-dot"></span></div>
+          <div class="status-block" aria-live="polite" aria-atomic="true"><p id="turn-label" class="turn-label">Setting the board</p><h2 id="status-title">One moment…</h2><p id="status-detail">Your game will be ready shortly.</p></div>
+          <div class="settings">
+            <fieldset class="side-setting"><legend>You play as</legend><div class="segmented"><button type="button" data-side="black" aria-pressed="true"><i class="side-dot black-dot"></i> Black</button><button type="button" data-side="white" aria-pressed="false"><i class="side-dot white-dot"></i> White</button></div></fieldset>
+            <label class="strength-label" for="strength">Opponent strength</label><select id="strength"><option value="relaxed">Relaxed</option><option value="balanced" selected>Balanced</option><option value="challenging">Challenging</option></select>
+            <p class="strength-hint" id="strength-hint">A little room to think. A reason to be careful.</p>
+          </div>
+          <button id="new-game" class="primary-button">New game <span aria-hidden="true">↗</span></button>
+          <div class="secondary-actions"><button id="undo" disabled><span aria-hidden="true">↶</span> Undo turn</button><button id="flip"><span aria-hidden="true">⇅</span> Flip board</button></div>
+          <p class="save-note" id="save-note">Saved automatically in this browser</p>
+        </section>
+        <section class="history-card"><div class="history-heading"><h2>Moves</h2><span id="move-count">0</span></div><div class="history-columns"><span>TURN</span><span>BLACK</span><span>WHITE</span></div><div id="history" class="history-list" aria-label="Move history"><div class="empty-history"><span aria-hidden="true">↗</span><p>No moves yet.</p><small>Black has the first word.</small></div></div></section>
+        <p class="sidebar-footnote">Take your time. There’s no clock.</p>
+      </aside>
+    </div>
+  </main>
+  <footer><span>African chess</span><span>Invented rules. Open possibilities.</span></footer>
+  <dialog id="promotion"><div class="dialog-heading"><p class="eyebrow">A NEW BEGINNING</p><h2>Choose your piece.</h2><p>Your pawn has reached the other side.</p></div><div id="promotion-options" class="promotion-options"></div><button id="cancel-promotion" class="dialog-cancel">Cancel</button></dialog>
+</body>
+</html>

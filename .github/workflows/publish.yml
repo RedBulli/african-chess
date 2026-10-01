@@ -1,0 +1,126 @@
+# Build the image and publish it to GHCR.
+#
+# This is the whole of this repository's responsibility as far as deploying
+# goes. The repository does not know which machine the site runs on, which
+# domain it answers on or which proxy sits in front of it — it only knows how to
+# build an image of itself and publish it.
+#
+# Tags are immutable, so that a deploy can say which version went out and a
+# rollback can point at the previous one:
+#   sha-<short>   for every commit that lands on main
+#   <release tag> for every release (e.g. v1.2.3)
+#   latest        for releases only, as a convenience — this is never deployed
+name: Publish image
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  # For running by hand, when the image has to be rebuilt without a code change.
+  workflow_dispatch:
+
+env:
+  # The service's name where it is deployed, not the repository's.
+  SERVICE: achess
+
+jobs:
+  # No image is built from a broken commit, because the image is what gets
+  # deployed.
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --locked
+      - run: node --test web/engine-client.test.mjs
+      - run: python3 -m unittest discover -s web -p 'test_*.py'
+
+  publish:
+    needs: tests
+    runs-on: ubuntu-latest
+    # The published tag goes out, so that the next job can pass it on.
+    outputs:
+      sha: ${{ steps.tags.outputs.sha }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Tags
+        id: tags
+        run: |
+          # The owner in lowercase: an image name may not contain uppercase
+          # letters, but the GitHub account name may.
+          IMAGE="ghcr.io/$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')/$SERVICE"
+          sha="sha-$(git rev-parse --short HEAD)"
+          tags="$IMAGE:$sha"
+          if [ "${{ github.event_name }}" = release ]; then
+            tags="$tags,$IMAGE:${{ github.event.release.tag_name }},$IMAGE:latest"
+          else
+            tags="$tags,$IMAGE:main"
+          fi
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha"   >> "$GITHUB_OUTPUT"
+
+      - name: Build and publish
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          # The toolchain layer (wasm-pack is compiled from source) is expensive
+          # and only changes along with the Dockerfile.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Say what was produced
+        run: |
+          echo "### Published" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.tags.outputs.tags }}" | tr ',' '\n' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  # Tell whoever deploys about the publication.
+  #
+  # This repository does not name its deployer: the target is in the repository
+  # variable DEPLOY_DISPATCH_REPO. If that is unset, the job is skipped and the
+  # repository only builds and publishes. The message says what was published —
+  # the service name and the tag — and nothing else.
+  #
+  # For commits that land on main, and for manual runs from main. Not for
+  # releases: deploying a release is a decision rather than a consequence.
+  notify:
+    needs: publish
+    if: >-
+      vars.DEPLOY_DISPATCH_REPO != '' &&
+      (github.event_name == 'push' ||
+       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Announce the publication
+        env:
+          TARGET: ${{ vars.DEPLOY_DISPATCH_REPO }}
+          TOKEN: ${{ secrets.DEPLOY_DISPATCH_TOKEN }}
+          TAG: ${{ needs.publish.outputs.sha }}
+        run: |
+          [ -n "$TOKEN" ] || { echo "::error::secret DEPLOY_DISPATCH_TOKEN is missing"; exit 1; }
+          curl -fsS -X POST "https://api.github.com/repos/$TARGET/dispatches" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -d "$(printf '{"event_type":"published","client_payload":{"service":"%s","tag":"%s"}}' "$SERVICE" "$TAG")"
+          echo "Announced: $SERVICE $TAG -> $TARGET"

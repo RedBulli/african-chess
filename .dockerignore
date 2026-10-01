@@ -1,0 +1,15 @@
+# Allowlist, like .gitignore: only what the image build reads. Keeps local
+# research, run data and build output out of the build context.
+*
+!Caddyfile
+!Cargo.toml
+!Cargo.lock
+!rust-toolchain.toml
+!src
+!tests
+!models/browser.weights
+!web/*.html
+!web/*.css
+!web/*.svg
+!web/*.js
+!web/*.py

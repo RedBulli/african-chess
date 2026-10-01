@@ -1,0 +1,47 @@
+[package]
+name = "african-chess"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+description = "Browser-based African Chess with a Rust WebAssembly rules engine"
+# Keep local experimental tools outside the public build, even when present.
+autobins = false
+autotests = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# Native reference executable used by web/wasm-test.mjs.
+[[bin]]
+name = "web-engine"
+path = "src/bin/web-engine.rs"
+
+[[test]]
+name = "browser"
+path = "tests/browser.rs"
+
+[[test]]
+name = "learning"
+path = "tests/learning.rs"
+
+[[test]]
+name = "play"
+path = "tests/play.rs"
+
+[[test]]
+name = "rules"
+path = "tests/rules.rs"
+
+[dependencies]
+serde_json = "1"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+
+[profile.release]
+lto = "thin"
+
+# Rust already optimizes release builds. Older wasm-pack distributions bundle a
+# wasm-opt that cannot parse the modern WASM emitted by the pinned Rust toolchain.
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
