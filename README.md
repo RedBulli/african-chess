@@ -3,6 +3,9 @@
 A playable chess variant with freezing bishops, jumping elephants, and giraffes
 that can capture without moving. Black moves first.
 
+**Play it now at [achess.verkasalo.com](https://achess.verkasalo.com/)** — free,
+no account, straight in your browser.
+
 The game runs entirely in your browser. A Rust engine compiled to WebAssembly
 handles rules and the computer opponent in a Web Worker. The site needs only
 static hosting: no backend, accounts, or game API.
@@ -106,3 +109,7 @@ Documented defaults for details not separately specified by the inventor:
 
 Moves use coordinates: `a7a6`; promotion: `a7a8n`; stationary capture:
 `b2b6@` (the giraffe stays on b2 and removes the enemy on b6).
+
+## License
+
+[MIT](LICENSE)

@@ -3,5 +3,13 @@
 :80 {
 	root * /srv
 	encode zstd gzip
+	# The policy follows from what the site loads, so it lives with the site.
+	# Keep it in step with web/server.py. Asset names carry no version, so
+	# browsers revalidate rather than reuse a stale engine.
+	header {
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'self'; img-src 'self' data:; frame-ancestors 'none'"
+		X-Content-Type-Options nosniff
+		Cache-Control no-cache
+	}
 	file_server
 }

@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.88"
 description = "Browser-based African Chess with a Rust WebAssembly rules engine"
+license = "MIT"
+repository = "https://github.com/RedBulli/african-chess"
+homepage = "https://achess.verkasalo.com/"
 # Keep local experimental tools outside the public build, even when present.
 autobins = false
 autotests = false

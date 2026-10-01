@@ -5,8 +5,8 @@
 # domain it answers on or which proxy sits in front of it — it only knows how to
 # build an image of itself and publish it.
 #
-# Tags are immutable, so that a deploy can say which version went out and a
-# rollback can point at the previous one:
+# The sha and release tags are immutable, so that a deploy can say which
+# version went out and a rollback can point at the previous one:
 #   sha-<short>   for every commit that lands on main
 #   <release tag> for every release (e.g. v1.2.3)
 #   latest        for releases only, as a convenience — this is never deployed
@@ -15,6 +15,8 @@ name: Publish image
 on:
   push:
     branches: [main]
+  # Pull requests run the tests only; nothing is published from them.
+  pull_request:
   release:
     types: [published]
   # For running by hand, when the image has to be rebuilt without a code change.
@@ -24,20 +26,27 @@ env:
   # The service's name where it is deployed, not the repository's.
   SERVICE: achess
 
+# Jobs that need more ask for it themselves.
+permissions:
+  contents: read
+
 jobs:
   # No image is built from a broken commit, because the image is what gets
   # deployed.
   tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
       - run: cargo test --locked
+      - run: cargo fmt --check
+      - run: cargo clippy --locked --all-targets -- -D warnings
       - run: node --test web/engine-client.test.mjs
       - run: python3 -m unittest discover -s web -p 'test_*.py'
 
   publish:
     needs: tests
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     # The published tag goes out, so that the next job can pass it on.
     outputs:
@@ -46,27 +55,32 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Tags
         id: tags
+        # Passed through the environment, never pasted into the script.
+        env:
+          OWNER: ${{ github.repository_owner }}
+          EVENT: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           # The owner in lowercase: an image name may not contain uppercase
           # letters, but the GitHub account name may.
-          IMAGE="ghcr.io/$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')/$SERVICE"
+          IMAGE="ghcr.io/$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')/$SERVICE"
           sha="sha-$(git rev-parse --short HEAD)"
           tags="$IMAGE:$sha"
-          if [ "${{ github.event_name }}" = release ]; then
-            tags="$tags,$IMAGE:${{ github.event.release.tag_name }},$IMAGE:latest"
+          if [ "$EVENT" = release ]; then
+            tags="$tags,$IMAGE:$RELEASE_TAG,$IMAGE:latest"
           else
             tags="$tags,$IMAGE:main"
           fi
@@ -74,7 +88,7 @@ jobs:
           echo "sha=$sha"   >> "$GITHUB_OUTPUT"
 
       - name: Build and publish
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
           push: true
@@ -88,10 +102,12 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Say what was produced
+        env:
+          TAGS: ${{ steps.tags.outputs.tags }}
         run: |
           echo "### Published" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          echo "${{ steps.tags.outputs.tags }}" | tr ',' '\n' >> "$GITHUB_STEP_SUMMARY"
+          echo "$TAGS" | tr ',' '\n' >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
   # Tell whoever deploys about the publication.
