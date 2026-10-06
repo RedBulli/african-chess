@@ -19,6 +19,11 @@ crate-type = ["cdylib", "rlib"]
 name = "web-engine"
 path = "src/bin/web-engine.rs"
 
+# Development tool: builds the static site and serves it locally.
+[[bin]]
+name = "site"
+path = "src/bin/site.rs"
+
 [[test]]
 name = "browser"
 path = "tests/browser.rs"

@@ -12,8 +12,8 @@ static hosting: no backend, accounts, or game API.
 
 ## Build and play
 
-Install Rust through rustup and Python 3.10 or newer. The repository pins its
-Rust toolchain in `rust-toolchain.toml`; rustup selects it automatically.
+Install Rust through rustup. The repository pins its Rust toolchain in
+`rust-toolchain.toml`; rustup selects it automatically.
 Install the WebAssembly build tools once from the repository root:
 
 ```sh
@@ -24,7 +24,7 @@ rustup target add wasm32-unknown-unknown
 Start the development server:
 
 ```sh
-python3 web/server.py
+cargo run --bin site -- serve
 ```
 
 Open **http://127.0.0.1:8787**. The launcher builds the site before serving it.
@@ -45,13 +45,13 @@ build inputs. Training and experimental AI tools are outside this repository.
 ## Deploy
 
 ```sh
-python3 web/build.py
+cargo run --bin site -- build
 ```
 
 Upload the contents of `dist/web/` to any static HTTP(S) host, including a
 GitHub Pages site. Subdirectory hosting is supported. Serve `.wasm` files as
-`application/wasm` and JavaScript as `text/javascript`. No Rust or Python runtime
-is needed on the host. Open the game over HTTP(S), not `file://`.
+`application/wasm` and JavaScript as `text/javascript`. No Rust runtime is
+needed on the host. Open the game over HTTP(S), not `file://`.
 
 Gameplay can continue offline after loading. Offline page reload is not
 provided. See [web/README.md](web/README.md) for hosting headers, the worker
@@ -64,13 +64,13 @@ cargo test --locked
 cargo fmt --check
 cargo clippy --locked --all-targets -- -D warnings
 node --test web/engine-client.test.mjs
-python3 -m unittest discover -s web -p 'test_*.py'
-python3 web/build.py
+cargo run --bin site -- build
 ```
 
-The repository contains the web assets, development/build scripts, Rust rules
-and opponent runtime, bundled weights, and their tests. `web-engine` is a native
-reference executable used to check WebAssembly parity. Build output and local
+The repository contains the web assets, Rust rules and opponent runtime, bundled
+weights, and their tests. `site` is the native build and development-server
+tool; `web-engine` is a native reference executable used to check WebAssembly
+parity. Build output and local
 research files are ignored. `.gitignore` explicitly lists the public files;
 add new web/build files to that list when extending the project.
 

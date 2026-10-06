@@ -32,8 +32,6 @@
 /web/*
 !/web/README.md
 !/web/app.js
-!/web/build.py
-!/web/server.py
 !/web/style.css
 !/web/icon.svg
 !/web/index.html
@@ -42,7 +40,6 @@
 !/web/engine-client.test.mjs
 !/web/browser-test.mjs
 !/web/wasm-test.mjs
-!/web/test_server.py
 
 !/models/
 /models/*
@@ -50,6 +47,7 @@
 
 !/src/bin/
 /src/bin/*
+!/src/bin/site.rs
 !/src/bin/web-engine.rs
 
 !/Dockerfile

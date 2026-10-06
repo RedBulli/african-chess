@@ -11,7 +11,7 @@ giraffe onto a stationary capture target leaves the giraffe on its original squa
 
 ## Build and serve
 
-Build prerequisites: the pinned Rust toolchain, Python 3.10+, and wasm-pack.
+Build prerequisites: the pinned Rust toolchain and wasm-pack.
 Install the additional build tools once:
 
 ```sh
@@ -22,13 +22,13 @@ rustup target add wasm32-unknown-unknown
 From the repository root:
 
 ```sh
-python3 web/build.py
-python3 -m http.server 8787 --bind 127.0.0.1 --directory dist/web
+cargo run --bin site -- serve
 ```
 
-Open http://127.0.0.1:8787. Alternatively, `python3 web/server.py` builds and
-launches a static development server. It accepts `--port 8788` and `--no-build`.
-It never executes game requests or starts a native engine process.
+Open http://127.0.0.1:8787. This builds the site into `dist/web/` and launches
+a static development server (`src/bin/site.rs`). It accepts `--port 8788` and
+`--no-build`; `cargo run --bin site -- build` only builds. The server never
+executes game requests or starts a native engine process.
 
 Upload the contents of `dist/web/` to a static HTTP(S) host. Relative module and
 asset URLs support deployment under a subdirectory, such as `/african-chess/`.
@@ -75,8 +75,7 @@ cargo test --locked
 cargo fmt --check
 cargo clippy --locked --all-targets -- -D warnings
 node --test web/engine-client.test.mjs
-python3 -m unittest discover -s web -p 'test_*.py'
-python3 web/build.py
+cargo run --bin site -- build
 cargo build --locked --release --bin web-engine
 ```
 
@@ -87,7 +86,7 @@ npm install --no-save --package-lock=false playwright
 npx playwright install chromium
 ```
 
-With the static server running (`python3 web/server.py --no-build`):
+With the static server running (`cargo run --bin site -- serve --no-build`):
 
 ```sh
 node web/browser-test.mjs
@@ -97,7 +96,7 @@ node web/wasm-test.mjs
 `PLAYWRIGHT_MODULE` can point to an existing `playwright` or `playwright-core`
 installation. `GAME_URL` overrides the default http://127.0.0.1:8787; include a
 trailing slash when serving under a subdirectory. For example, serve `dist/`
-and set `GAME_URL=http://127.0.0.1:8787/web/` to exercise prefixed hosting.
+with any static file server and set `GAME_URL=http://127.0.0.1:8787/web/` to exercise prefixed hosting.
 
 The browser tests cover mouse/touch dragging and cancellation, invalid drops,
 flipped-board dragging, actual human/AI moves, save/restore, both sides, undo,

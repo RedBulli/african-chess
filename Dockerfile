@@ -1,12 +1,12 @@
 # The static site as an image: the Rust engine is compiled to WebAssembly in the
 # first stage, and the second stage is a web server holding nothing but the
-# result. No Rust or Python is present at runtime.
+# result. No Rust is present at runtime.
 
 FROM rust:1.98.1-slim-bookworm AS build
 
-# python3 runs web/build.py; curl lets wasm-pack fetch its wasm-bindgen binary.
+# curl lets wasm-pack fetch its wasm-bindgen binary.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends python3 curl ca-certificates \
+    && apt-get install -y --no-install-recommends curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Before the sources, so that these layers survive a code change.
@@ -22,7 +22,7 @@ COPY tests tests
 COPY models models
 COPY web web
 
-RUN python3 web/build.py
+RUN cargo run --locked --bin site -- build
 
 FROM caddy:2-alpine
 COPY Caddyfile /etc/caddy/Caddyfile
