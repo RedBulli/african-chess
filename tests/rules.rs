@@ -136,23 +136,27 @@ fn giraffe_ray_gives_check_but_king_is_never_captured() {
 }
 
 #[test]
-fn castling_moves_elephant_and_updates_rights() {
-    let p = pos("4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1");
-    let next = p.play_text("e1g1").unwrap();
-    assert_eq!(
-        next.piece(square("f1").unwrap()).unwrap().kind,
-        Kind::Elephant
-    );
-    assert!(next.piece(square("h1").unwrap()).is_none());
-    assert_eq!(next.to_fen(), "4k3/8/8/8/8/8/8/R4RK1 b - - 1 1");
+fn castling_is_illegal_even_with_legacy_fen_rights() {
+    for (fen, king, castles) in [
+        ("4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1", "e1", ["e1g1", "e1c1"]),
+        ("r3k2r/8/8/8/8/8/8/4K3 b kq - 0 1", "e8", ["e8g8", "e8c8"]),
+    ] {
+        let p = pos(fen);
+        for castle in castles {
+            assert!(!moves(&p, king).contains(&castle.into()));
+            assert!(p.play_text(castle).is_err());
+        }
+        assert_eq!(p.to_fen().split_whitespace().nth(2), Some("-"));
+    }
 }
 
 #[test]
-fn castling_forbidden_through_check_or_with_frozen_elephant() {
-    let attacked = pos("4kq2/8/8/8/8/8/8/4K2R w K - 0 1");
-    assert!(!moves(&attacked, "e1").contains(&"e1g1".into()));
-    let frozen = pos("4k3/8/8/8/8/8/7b/4K2R w K - 0 1");
-    assert!(!moves(&frozen, "e1").contains(&"e1g1".into()));
+fn legacy_castling_rights_do_not_distinguish_positions() {
+    // Repetition compares board and side only, so dropped rights cannot split a cycle.
+    assert_eq!(
+        pos("4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1"),
+        pos("4k3/8/8/8/8/8/8/R3K2R w - - 0 1")
+    );
 }
 
 #[test]
@@ -219,8 +223,14 @@ fn promotion_includes_all_variant_pieces() {
 
 #[test]
 fn fen_roundtrip_and_bad_inputs_fail_safely() {
-    let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1";
+    let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b - - 0 1";
     assert_eq!(pos(fen).to_fen(), fen);
+    assert_eq!(Position::initial().to_fen(), fen);
+    // Legacy castling rights are validated, then dropped.
+    assert_eq!(
+        pos("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1").to_fen(),
+        fen
+    );
     for s in [
         "",
         "8/8/8/8/8/8/8/8 w - - 0 1",

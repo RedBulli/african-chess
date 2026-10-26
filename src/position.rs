@@ -4,13 +4,12 @@ use crate::{Color, Kind, Move, Piece, square};
 pub struct Position {
     pub(crate) board: [Option<Piece>; 64],
     pub side: Color,
-    pub(crate) castling: u8,
     pub halfmove: u32,
     pub fullmove: u32,
 }
 impl Position {
     pub fn initial() -> Self {
-        Self::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1").unwrap()
+        Self::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b - - 0 1").unwrap()
     }
     pub fn from_fen(s: &str) -> Result<Self, String> {
         let fields: Vec<_> = s.split_whitespace().collect();
@@ -77,6 +76,7 @@ impl Position {
             "b" => Color::Black,
             _ => return Err("Side must be w or b".into()),
         };
+        // Validate legacy FEN metadata, but discard it: this variant has no castling.
         let mut castling = 0;
         if fields[2] != "-" {
             for c in fields[2].chars() {
@@ -141,7 +141,6 @@ impl Position {
         Ok(Self {
             board,
             side,
-            castling,
             halfmove,
             fullmove,
         })
@@ -168,15 +167,9 @@ impl Position {
                 out.push('/');
             }
         }
-        let rights: String = [(1, 'K'), (2, 'Q'), (4, 'k'), (8, 'q')]
-            .iter()
-            .filter(|(bit, _)| self.castling & bit != 0)
-            .map(|(_, c)| *c)
-            .collect();
         format!(
-            "{out} {} {} - {} {}",
+            "{out} {} - - {} {}",
             if self.side == Color::White { "w" } else { "b" },
-            if rights.is_empty() { "-" } else { &rights },
             self.halfmove,
             self.fullmove
         )
@@ -209,23 +202,6 @@ impl Position {
                 kind: m.promotion.unwrap_or(piece.kind),
                 ..piece
             });
-            if piece.kind == Kind::King && m.from.abs_diff(m.to) == 2 {
-                let (from, to) = if m.to > m.from {
-                    (m.from + 3, m.from + 1)
-                } else {
-                    (m.from - 4, m.from - 1)
-                };
-                next.board[to as usize] = next.board[from as usize];
-                next.board[from as usize] = None;
-            }
-        }
-        if piece.kind == Kind::King {
-            next.castling &= if piece.color == Color::White { !3 } else { !12 };
-        }
-        for (sq, bit) in [(0, 2), (7, 1), (56, 8), (63, 4)] {
-            if m.from == sq || m.to == sq {
-                next.castling &= !bit;
-            }
         }
         next.halfmove = if piece.kind == Kind::Pawn || capture {
             0

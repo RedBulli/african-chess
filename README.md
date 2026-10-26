@@ -81,13 +81,13 @@ Standard starting board, **Black first**. FEN uses standard chess letters:
 
 | Piece | Movement and effect |
 | --- | --- |
-| Pawn, queen, king | Ordinary chess moves, subject to freezing; no en passant. |
+| Pawn, queen, king | Ordinary chess moves, subject to freezing; no castling or en passant. |
 | Bishop | Ordinary diagonal movement/capture. Freezes every adjacent enemy, including diagonal neighbors. |
 | Giraffe | Knight movement/capture, plus a stationary capture of the first enemy along its forward file. Any intervening piece blocks the stationary capture. |
 | Elephant | Jumps to any of the other 24 squares in a surrounding 5×5 area, within the board; captures at destination. |
 
-Freezing is positional. Frozen pieces cannot move, capture, castle, or give
-check. Frozen bishops keep their passive aura. A frozen piece can be captured;
+Freezing is positional. Frozen pieces cannot move, capture, or give check.
+Frozen bishops keep their passive aura. A frozen piece can be captured;
 removing its last adjacent enemy bishop immediately thaws it.
 
 King safety is checked after each move, including changed freezing effects.
@@ -98,9 +98,8 @@ Documented defaults for details not separately specified by the inventor:
 
 - Giraffe “forward” means toward the opponent's original home rank; a
   stationary capture takes an entire turn.
-- Castling uses ordinary chess paths and rights; both king and elephant must
-  be unfrozen. Pawn double steps and promotion apply. En passant is not allowed. Promotion
-  offers queen, bishop, giraffe or elephant.
+- There is no castling and no en passant. Pawn double steps and promotion
+  apply. Promotion offers queen, bishop, giraffe or elephant.
 - The game automatically claims a threefold repetition or fifty-move
   draw once present; claims before an intended move are not modeled.
 - Bare kings are drawn. Other ordinary insufficient-material shortcuts are

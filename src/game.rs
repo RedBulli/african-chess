@@ -32,14 +32,12 @@ impl Outcome {
 struct PositionKey {
     board: [Option<Piece>; 64],
     side: Color,
-    castling: u8,
 }
 impl PositionKey {
     fn new(p: &Position) -> Self {
         Self {
             board: p.board,
             side: p.side,
-            castling: p.castling,
         }
     }
 }

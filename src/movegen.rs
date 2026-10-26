@@ -202,64 +202,9 @@ impl Position {
                             }
                         }
                     }
-                    if piece.kind == Kind::King {
-                        self.castles(&mut moves, from, frozen);
-                    }
                 }
             }
         }
         moves
-    }
-    fn castles(&self, moves: &mut Vec<Move>, from: u8, frozen: u64) {
-        let (home, king_bit, queen_bit) = if self.side == Color::White {
-            (4, 1, 2)
-        } else {
-            (60, 4, 8)
-        };
-        if from != home || self.in_check(self.side) {
-            return;
-        }
-        for (bit, rook, transit, to, empty) in [
-            (
-                king_bit,
-                home + 3,
-                home + 1,
-                home + 2,
-                vec![home + 1, home + 2],
-            ),
-            (
-                queen_bit,
-                home - 4,
-                home - 1,
-                home - 2,
-                vec![home - 1, home - 2, home - 3],
-            ),
-        ] {
-            if self.castling & bit == 0
-                || frozen & (1u64 << rook) != 0
-                || self.board[rook as usize]
-                    != Some(Piece {
-                        color: self.side,
-                        kind: Kind::Elephant,
-                    })
-                || empty.iter().any(|&s| self.board[s as usize].is_some())
-            {
-                continue;
-            }
-            let step = Move {
-                from,
-                to: transit,
-                promotion: None,
-                stationary: false,
-            };
-            if !self.apply_unchecked(step).in_check(self.side) {
-                moves.push(Move {
-                    from,
-                    to,
-                    promotion: None,
-                    stationary: false,
-                });
-            }
-        }
     }
 }
